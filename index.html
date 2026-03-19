@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Діагностика блогу | Vladyslava Tsarenko</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Intl-Tel-Input CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
+
+    <!-- Meta Pixel Code (Placeholder) -->
+    <script>
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', 'YOUR_PIXEL_ID'); // ВСТАВ СВІЙ ID ПІКСЕЛЯ ТУТ
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1"/></noscript>
+    <!-- End Meta Pixel Code -->
+
+    <style>
+        body { font-family: 'Montserrat', sans-serif; background-color: #0A0A0F; color: #F0EDE8; overflow-x: hidden; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        .bg-creamy { background-color: #131318; color: #F0EDE8; }
+        .text-accent { color: #E8C872; }
+        .bg-accent { background-color: #E8C872; }
+        .border-accent { border-color: #E8C872; }
+        
+        /* Smooth transitions */
+        .fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* ══════ FLOATING BACKGROUND STYLES ══════ */
+        .floating-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .float-item {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 100px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            animation: floatUp linear infinite;
+            will-change: transform, opacity;
+        }
+
+        .float-item.like { background: rgba(232, 84, 84, 0.12); border: 1px solid rgba(232, 84, 84, 0.15); color: #E85454; }
+        .float-item.follower { background: rgba(94, 196, 138, 0.1); border: 1px solid rgba(94, 196, 138, 0.12); color: #5EC48A; }
+        .float-item.dm { background: rgba(107, 163, 232, 0.1); border: 1px solid rgba(107, 163, 232, 0.12); color: #6BA3E8; }
+        .float-item.story { background: rgba(232, 113, 168, 0.1); border: 1px solid rgba(232, 113, 168, 0.12); color: #E871A8; }
+        .float-item.save { background: rgba(232, 200, 114, 0.08); border: 1px solid rgba(232, 200, 114, 0.1); color: #E8C872; }
+        .float-item.comment { background: rgba(160, 140, 232, 0.1); border: 1px solid rgba(160, 140, 232, 0.12); color: #A08CE8; }
+
+        .float-icon { font-size: 16px; line-height: 1; }
+
+        @keyframes floatUp {
+            0% { opacity: 0; transform: translateY(20px) rotate(-2deg) scale(0.9); }
+            8% { opacity: 0.5; transform: translateY(0px) rotate(0deg) scale(1); }
+            85% { opacity: 0.5; }
+            100% { opacity: 0; transform: translateY(-110vh) rotate(3deg) scale(0.95); }
+        }
+
+        /* Intl-Tel-Input fixes */
+        .iti { width: 100%; }
+        .iti__flag { background-image: url("https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/img/flags.png"); }
+        @media (min-resolution: 2x) { .iti__flag { background-image: url("https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/img/flags@2x.png"); } }
+        
+        /* Input styling */
+        .custom-input { width: 100%; padding: 1.2rem; border-radius: 0.75rem; border: 1px solid #5E5B56; background-color: #1A1A21; color: #F0EDE8; outline: none; transition: all 0.3s; font-size: 1rem; }
+        .custom-input:focus { border-color: #E8C872; box-shadow: 0 0 0 2px rgba(232,200,114,0.2); }
+        .error-border { border-color: #E85454 !important; }
+    </style>
+</head>
+<body class="antialiased min-h-screen relative">
+
+    <!-- ══════ NEW FLOATING BACKGROUND ══════ -->
+    <div class="floating-bg" id="floatingBg"></div>
+
+    <!-- ==================== LANDING PAGE VIEW ==================== -->
+    <div id="landing-view" class="fade-in pb-20 relative z-10">
+        
+        <!-- Subtle IG gradient base -->
+        <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-[80vw] max-w-3xl h-[400px] bg-gradient-to-tr from-[#E8C872]/10 via-[#E871A8]/10 to-[#6BA3E8]/10 blur-[100px] rounded-full pointer-events-none z-0"></div>
+
+        <!-- Hero Section -->
+        <section class="relative pt-24 pb-16 px-5 max-w-4xl mx-auto text-center z-10 min-h-[85vh] flex flex-col justify-center">
+            
+            <!-- Бейдж (Надзаголовок) -->
+            <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-[#E8C872]/30 bg-[#E8C872]/10 text-[#E8C872] text-sm md:text-base font-semibold tracking-wide mb-8 shadow-[0_0_15px_rgba(232,200,114,0.1)] mx-auto">
+                <i data-lucide="star" class="w-4 h-4 fill-current"></i>
+                Для експертів з доходом від $1 000/міс
+            </div>
+            
+            <!-- Заголовок -->
+            <h1 class="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-[#F0EDE8]">
+                Безкоштовна діагностика твого блогу від <span class="text-accent font-cinzel tracking-wider">Влади</span>
+            </h1>
+            
+            <!-- Текст (Офер) -->
+            <p class="text-xl md:text-2xl text-[#F2DFA0] font-medium mb-6 max-w-3xl mx-auto">
+                Дізнайся чому твій блог не приносить стабільні заявки
+            </p>
+            
+            <!-- Підзаголовок -->
+            <p class="text-base md:text-lg text-[#9C9890] max-w-2xl mx-auto mb-10 leading-relaxed font-light">
+                Я особисто подивлюся на твій блог, покажу де ти втрачаєш клієнтів — і дам конкретний план що змінити, щоб заявки йшли системно, а не випадково.
+            </p>
+            
+            <!-- Кнопка та текст під нею -->
+            <div class="flex flex-col items-center mt-auto md:mt-0">
+                <button onclick="startQuiz()" class="bg-accent hover:bg-[#d4b35e] text-[#0A0A0F] font-bold py-4 px-10 md:px-14 rounded-full text-lg shadow-[0_0_25px_rgba(232,200,114,0.35)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(232,200,114,0.5)] flex items-center justify-center gap-3 w-full sm:w-auto">
+                    Отримати діагностику
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </button>
+                
+                <p class="text-sm md:text-base text-[#5E5B56] max-w-lg mx-auto mt-6 italic font-light leading-relaxed">
+                    *Я беру обмежену кількість людей на діагностику, адже проводжу її особисто. Заповни дані — і, можливо, саме з тобою я зв’яжуся.
+                </p>
+            </div>
+        </section>
+
+        <!-- Block 2: Details -->
+        <section class="bg-creamy py-20 px-5 mt-8 relative z-10 border-t border-b border-[#E8C872]/10">
+            <div class="max-w-3xl mx-auto">
+                <p class="text-2xl md:text-3xl font-bold mb-12 text-[#F0EDE8] text-center">
+                    На діагностиці ми разом поглибимося:
+                </p>
+                
+                <div class="flex flex-col gap-4 md:gap-5 mb-14">
+                    <!-- Item 1 -->
+                    <div class="flex items-center gap-5 md:gap-6 bg-[#1A1A21] p-5 md:p-6 rounded-2xl border border-[#5E5B56]/30 shadow-sm hover:border-[#E8C872]/30 transition-colors">
+                        <div class="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-[#E8C872]/10 text-accent rounded-2xl shrink-0">
+                            <i data-lucide="target" class="w-6 h-6 md:w-8 md:h-8"></i>
+                        </div>
+                        <p class="font-medium text-lg md:text-xl text-[#F0EDE8] leading-snug">В твою точку А</p>
+                    </div>
+                    <!-- Item 2 -->
+                    <div class="flex items-center gap-5 md:gap-6 bg-[#1A1A21] p-5 md:p-6 rounded-2xl border border-[#5E5B56]/30 shadow-sm hover:border-[#E8C872]/30 transition-colors">
+                        <div class="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-[#E8C872]/10 text-accent rounded-2xl shrink-0">
+                            <i data-lucide="search" class="w-6 h-6 md:w-8 md:h-8"></i>
+                        </div>
+                        <p class="font-medium text-lg md:text-xl text-[#F0EDE8] leading-snug">Що вже пробувала робити і де помилки</p>
+                    </div>
+                    <!-- Item 3 -->
+                    <div class="flex items-center gap-5 md:gap-6 bg-[#1A1A21] p-5 md:p-6 rounded-2xl border border-[#5E5B56]/30 shadow-sm hover:border-[#E8C872]/30 transition-colors">
+                        <div class="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-[#E8C872]/10 text-accent rounded-2xl shrink-0">
+                            <i data-lucide="trending-up" class="w-6 h-6 md:w-8 md:h-8"></i>
+                        </div>
+                        <p class="font-medium text-lg md:text-xl text-[#F0EDE8] leading-snug">Як тобі вирости в доході за найближчі 3-6 місяців</p>
+                    </div>
+                    <!-- Item 4 -->
+                    <div class="flex items-center gap-5 md:gap-6 bg-[#1A1A21] p-5 md:p-6 rounded-2xl border border-[#5E5B56]/30 shadow-sm hover:border-[#E8C872]/30 transition-colors">
+                        <div class="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-accent text-[#0A0A0F] rounded-2xl shrink-0 shadow-[0_0_15px_rgba(232,200,114,0.3)]">
+                            <i data-lucide="rocket" class="w-6 h-6 md:w-8 md:h-8"></i>
+                        </div>
+                        <p class="font-medium text-lg md:text-xl text-accent leading-snug">Які є рішення для швидкого росту</p>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <button onclick="startQuiz()" class="bg-accent hover:bg-[#d4b35e] text-[#0A0A0F] font-bold py-4 px-10 md:px-14 rounded-full text-lg shadow-[0_0_25px_rgba(232,200,114,0.35)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(232,200,114,0.5)] flex items-center justify-center gap-3 w-full sm:w-auto mx-auto">
+                        Отримати діагностику
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Block 3: Author -->
+        <section class="py-20 px-5 max-w-5xl mx-auto relative z-10">
+            <div class="flex flex-col md:flex-row items-center gap-12 md:gap-16">
+                <div class="w-full md:w-1/2">
+                    <!-- Заміни src на реальне фото Влади. loading="lazy" для оптимізації -->
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=800&auto=format&fit=crop" 
+                         alt="Влада Царенко" 
+                         loading="lazy"
+                         class="rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-full object-cover aspect-[4/5] border border-[#E8C872]/20">
+                </div>
+                <div class="w-full md:w-1/2">
+                    <h2 class="text-4xl font-bold mb-3 text-[#F0EDE8]">Влада</h2>
+                    <p class="text-accent font-semibold mb-8 tracking-widest text-xs md:text-sm uppercase">Продюсер • Стратег • Наставниця</p>
+                    
+                    <div class="space-y-5 text-[#9C9890] font-light leading-relaxed text-base md:text-lg">
+                        <p>Раніше я теж знімала сторіс кожен день, робила прогріви — а в дірект тиша. Вигорала, сумнівалася, хотіла все кинути.</p>
+                        <p>Потім я побудувала <strong class="text-[#F0EDE8] font-medium">СИСТЕМУ</strong>. І все змінилося. Зараз я допомагаю експертам перестати жити від запуску до запуску та вибудувати стабільний дохід з блогу.</p>
+                        <p>Мій метод — це поєднання стратегії, контент-воронок і психології продажів. Я не про «танцювати з бубном в рілс», а про систему, де 20% дій дають 80% результату.</p>
+                        <p>Я супроводжую на кожному етапі: ми разом розробляємо стратегію, чіткий план дій і коригуємо процеси.</p>
+                        <div class="pt-4">
+                            <p class="font-medium text-[#F0EDE8] text-xl md:text-2xl border-l-4 border-accent pl-4">Твердий підхід + м'яка підтримка.</p>
+                        </div>
+                    </div>
+                    
+                    <button onclick="startQuiz()" class="mt-10 bg-accent hover:bg-[#d4b35e] text-[#0A0A0F] font-bold py-4 px-10 md:px-14 rounded-full text-lg shadow-[0_0_25px_rgba(232,200,114,0.35)] transition-all transform hover:scale-105 hover:shadow-[0_0_35px_rgba(232,200,114,0.5)] flex items-center justify-center gap-3 w-full sm:w-auto">
+                        Отримати діагностику
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ==================== QUIZ VIEW ==================== -->
+    <div id="quiz-view" class="hidden min-h-screen flex flex-col items-center justify-center p-5 fade-in relative z-10">
+        <div class="absolute inset-0 bg-[#0A0A0F]/80 backdrop-blur-md z-0"></div>
+        
+        <div class="w-full max-w-2xl bg-[#131318] border border-[#E8C872]/20 rounded-3xl p-6 md:p-10 shadow-2xl relative z-10">
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-[#1A1A21] rounded-full h-1.5 mb-8 overflow-hidden">
+                <div id="progress-bar" class="bg-accent h-1.5 rounded-full transition-all duration-500 ease-out" style="width: 11%"></div>
+            </div>
+            
+            <p class="text-[#9C9890] text-sm mb-8 text-center uppercase tracking-widest font-semibold">Крок <span id="current-step-num" class="text-[#F0EDE8] text-base">1</span> з 9</p>
+
+            <form id="quiz-form" onsubmit="return false;">
+                
+                <!-- STEP 1: Contacts -->
+                <div class="quiz-step" data-step="1">
+                    <h3 class="text-2xl md:text-3xl font-bold mb-8 text-[#F0EDE8]">Ваші контактні дані</h3>
+                    
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm text-[#9C9890] mb-2 ml-1">Ім'я (без цифр) *</label>
+                            <input type="text" id="q_name" class="custom-input" placeholder="Ваше ім'я" required>
+                            <p id="name-error" class="text-[#E85454] text-xs mt-2 ml-1 hidden">Ім'я не може містити цифри.</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm text-[#9C9890] mb-2 ml-1">Номер телефону *</label>
+                            <input type="tel" id="q_phone" class="custom-input" required>
+                            <p id="phone-error" class="text-[#E85454] text-xs mt-2 ml-1 hidden">Введіть коректний номер.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-[#9C9890] mb-2 ml-1">Нікнейм в Telegram (через @) *</label>
+                            <input type="text" id="q_tg" class="custom-input" placeholder="@username" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2 -->
+                <div class="quiz-step hidden" data-step="2">
+                    <h3 class="text-2xl md:text-3xl font-bold mb-4 text-[#F0EDE8]">Ваш інстаграм</h3>
+                    <p class="text-base text-[#9C9890] mb-8 font-light">Щоб я могла одразу подивитися та проаналізувати ваш блог.</p>
+                    <input type="text" id="q_insta" class="custom-input" placeholder="Посилання або нікнейм" required>
+                </div>
+
+                <!-- STEP 3 -->
+                <div class="quiz-step hidden" data-step="3">
+                    <h3 class="text-2xl md:text-3xl font-bold mb-8 text-[#F0EDE8]">В якій ніші ти працюєш?</h3>
+                    <input type="text" id="q_niche" class="custom-input" placeholder="Наприклад: фітнес, психологія, маркетинг..." required>
+                </div>
+
+                <!-- STEP 4 -->
+                <div class="quiz-step hidden" data-step="4">
+                    <h3 class="text-2xl md:text-3xl font-bold mb-8 text-[#F0EDE8]">Що ти зараз продаєш?</h3>
+                    <textarea id="q_product" class="custom-input h-32 resize-none" placeholder="Опиши свій продукт або послугу..." required></textarea>
+                </div>
+
+                <!-- STEP 5 -->
+                <div class="quiz-step hidden" data-step="5">
+                    <h3 class="text-2xl md:text-3xl font-bold mb-8 text-[#F0EDE8] text-center">Який у тебе зараз середній дохід з блогу?</h3>
+                    <input type="text" id="q_income_current" class="custom-input text-center text-xl" placeholder="Вкажи суму (в $ або грн)" required>
+                </div>
+
+                <!-- STEP 6 -->
+                <div class="quiz-step hidden" data-step="6">
+                    <h3 class="text-2xl md:text-3xl font-bold mb-8 text-[#F0EDE8] text-center">Який твій найбільший результат по продажам?</h3>
+                    <input type="text" id="q_income_max" class="custom-input text-center text-xl" placeholder="Рекордний запуск/місяць" required>
+                </div>
+
+                <!-- STEP 7 -->
+                <div class="quiz-step hidden" data-step="7">
+                    <h3 class="text-2xl md:text-3xl font-bold mb-8 text-[#F0EDE8]">В чому зараз найбільша проблема?</h3>
+                    <textarea id="q_problem" class="custom-input h-40 resize-none" placeholder="Що не виходить? Що заважає рости?" required></textarea>
+                </div>
+
+                <!-- STEP 8 -->
+                <div class="quiz-step hidden" data-step="8">
+                    <h3 class="text-xl md:text-2xl font-bold mb-8 text-[#F0EDE8] leading-snug">Чи готовий(а) вкладатися в розвиток, якщо бачиш чіткий план і результат?</h3>
+                    <textarea id="q_invest" class="custom-input h-32 resize-none" placeholder="Твоя відповідь..." required></textarea>
+                </div>
+
+                <!-- STEP 9 -->
+                <div class="quiz-step hidden" data-step="9">
+                    <h3 class="text-2xl md:text-3xl font-bold mb-8 text-[#F0EDE8] text-center">Яка твоя ціль по доходу на найближчі 3–6 місяців?</h3>
+                    <input type="text" id="q_goal" class="custom-input text-center text-xl" placeholder="Бажана сума" required>
+                </div>
+
+                <!-- Buttons -->
+                <div class="mt-10 flex gap-4">
+                    <button type="button" id="btn-prev" onclick="prevStep()" class="hidden w-1/3 bg-[#1A1A21] hover:bg-[#2a2a35] border border-[#5E5B56]/50 text-[#F0EDE8] font-medium py-4 rounded-xl transition-colors">
+                        Назад
+                    </button>
+                    <button type="button" id="btn-next" onclick="nextStep()" class="w-full bg-accent hover:bg-[#d4b35e] text-[#0A0A0F] font-bold py-4 rounded-xl transition-colors shadow-lg flex justify-center items-center gap-2">
+                        Далі
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                    <button type="button" id="btn-submit" onclick="submitForm()" class="hidden w-full bg-[#5EC48A] hover:bg-[#4eb379] text-[#0A0A0F] font-bold py-4 rounded-xl transition-colors relative flex justify-center items-center shadow-[0_0_20px_rgba(94,196,138,0.3)]">
+                        <span id="submit-text">Відправити дані</span>
+                        <div id="submit-loader" class="hidden ml-2 w-5 h-5 border-2 border-[#0A0A0F] border-t-transparent rounded-full animate-spin"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== THANK YOU VIEW ==================== -->
+    <div id="thankyou-view" class="hidden min-h-screen flex flex-col items-center justify-center p-5 text-center fade-in relative z-10">
+        <div class="bg-[#131318] border border-[#E8C872]/20 rounded-3xl p-10 md:p-14 max-w-lg shadow-2xl">
+            <div class="w-24 h-24 bg-[#5EC48A]/10 text-[#5EC48A] rounded-full flex items-center justify-center mx-auto mb-8">
+                <i data-lucide="check-circle" class="w-12 h-12"></i>
+            </div>
+            <h2 class="text-3xl md:text-4xl font-bold mb-4 text-[#F0EDE8]">Дякую за відповіді!</h2>
+            <p class="text-[#9C9890] text-lg mb-10 font-light leading-relaxed">
+                Я проаналізую твою ситуацію і зв’яжусь з тобою найближчим часом.<br><br>
+                <span class="text-[#F2DFA0] font-medium">А поки приєднуйся до мого ТГ-каналу.</span>
+            </p>
+            <a href="https://t.me/+GTyrq9XCL1swNTY0" target="_blank" class="inline-flex items-center justify-center gap-3 w-full bg-[#6BA3E8] hover:bg-[#5a92d7] text-[#0A0A0F] font-bold py-4 px-8 rounded-xl text-lg transition-transform transform hover:scale-105 shadow-[0_0_20px_rgba(107,163,232,0.3)]">
+                <i data-lucide="send" class="w-5 h-5"></i>
+                Доєднатися в Telegram
+            </a>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
+    
+    <script>
+        // Ініціалізація іконок
+        lucide.createIcons();
+
+        // ══════ FLOATING BACKGROUND ELEMENTS SCRIPT ══════
+        (function() {
+          const container = document.getElementById('floatingBg');
+
+          const items = [
+            { type: 'like', icon: '♥', texts: ['+1 лайк', '❤️ вподобання', '♥ +12', '♥ +47', '♥ +8'] },
+            { type: 'follower', icon: '👤', texts: ['+1 підписник', 'нова підписниця', '+3 підписники', 'нова аудиторія', '+1 фоловер'] },
+            { type: 'dm', icon: '✉', texts: ['нове повідомлення', 'заявка в директ', '"хочу купити"', 'запит на послугу', '"скільки коштує?"'] },
+            { type: 'story', icon: '◎', texts: ['переглянули сторіс', '+28 переглядів', '👁 143 перегляди', 'реакція на сторіс', '🔥 відповідь'] },
+            { type: 'save', icon: '🔖', texts: ['збережено', '+1 збереження', '🔖 зберегли пост', 'додано в збережене'] },
+            { type: 'comment', icon: '💬', texts: ['новий коментар', '"як записатись?"', '"де купити?"', '"підкажіть ціну"', '💬 +3 коментарі'] },
+          ];
+
+          function createFloatItem(isInitial = false) {
+            if(!container) return;
+            const cat = items[Math.floor(Math.random() * items.length)];
+            const text = cat.texts[Math.floor(Math.random() * cat.texts.length)];
+
+            const el = document.createElement('div');
+            el.className = `float-item ${cat.type}`;
+            el.innerHTML = `<span class="float-icon">${cat.icon}</span>${text}`;
+
+            el.style.left = Math.random() * 85 + 5 + '%';
+            el.style.bottom = '-50px';
+
+            const duration = 18 + Math.random() * 14;
+            el.style.animationDuration = duration + 's';
+            
+            let timeToLive = duration + 3;
+
+            if (isInitial) {
+                // Від'ємна затримка для стартових елементів (вони вже на екрані при завантаженні)
+                const negativeDelay = -(Math.random() * duration * 0.85);
+                el.style.animationDelay = negativeDelay + 's';
+                timeToLive = duration + negativeDelay + 3;
+            } else {
+                // Звичайна затримка для нових елементів, які летять знизу
+                el.style.animationDelay = Math.random() * 2 + 's';
+            }
+
+            container.appendChild(el);
+
+            setTimeout(() => el.remove(), timeToLive * 1000);
+          }
+
+          // Initial burst: миттєво створюємо 15 елементів, які вже розподілені по екрану
+          for (let i = 0; i < 15; i++) {
+            createFloatItem(true);
+          }
+
+          // Ongoing: продовжуємо генерувати нові елементи під час перегляду
+          setInterval(() => createFloatItem(false), 2000 + Math.random() * 1500);
+        })();
+
+        // КОНФІГУРАЦІЯ (ВСТАВ СВІЙ ПОСИЛАННЯ НА GOOGLE SCRIPT ТУТ)
+        const GOOGLE_APP_URL = 'YOUR_GOOGLE_SCRIPT_URL_HERE';
+
+        // Змінні квізу
+        let currentStep = 1;
+        const totalSteps = 9;
+        let phoneInputIti = null;
+
+        // Ініціалізація телефону (з GeoJS та фільтром країн)
+        document.addEventListener("DOMContentLoaded", function() {
+            const phoneInputField = document.querySelector("#q_phone");
+            
+            // Налаштування: виключаємо РФ і РБ. 
+            phoneInputIti = window.intlTelInput(phoneInputField, {
+                utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
+                initialCountry: "auto",
+                excludeCountries: ["ru", "by"], // Бан РФ і РБ
+                geoIpLookup: function(callback) {
+                    fetch("https://get.geojs.io/v1/ip/country.json")
+                        .then(resp => resp.json())
+                        .then(data => callback(data.country))
+                        .catch(() => callback("ua")); // За замовчуванням Україна
+                }
+            });
+        });
+
+        // Навігація SPA
+        function startQuiz() {
+            // Піксель: Початок заповнення форми
+            if(typeof fbq === 'function') fbq('track', 'InitiateCheckout');
+            
+            document.getElementById('landing-view').classList.add('hidden');
+            document.getElementById('quiz-view').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function validateCurrentStep() {
+            const currentDiv = document.querySelector(`.quiz-step[data-step="${currentStep}"]`);
+            const inputs = currentDiv.querySelectorAll('input, textarea');
+            let isValid = true;
+
+            inputs.forEach(input => {
+                input.classList.remove('error-border');
+                
+                // Перевірка на порожнечу
+                if (!input.value.trim()) {
+                    isValid = false;
+                    input.classList.add('error-border');
+                }
+
+                // Кастомна валідація Кроку 1
+                if (currentStep === 1) {
+                    // Валідація імені (без цифр)
+                    if (input.id === 'q_name') {
+                        const nameRegex = /^[^\d]+$/;
+                        if (!nameRegex.test(input.value)) {
+                            isValid = false;
+                            input.classList.add('error-border');
+                            document.getElementById('name-error').classList.remove('hidden');
+                        } else {
+                            document.getElementById('name-error').classList.add('hidden');
+                        }
+                    }
+
+                    // Валідація телефону
+                    if (input.id === 'q_phone') {
+                        if (!phoneInputIti.isValidNumber()) {
+                            isValid = false;
+                            input.classList.add('error-border');
+                            document.getElementById('phone-error').classList.remove('hidden');
+                        } else {
+                            document.getElementById('phone-error').classList.add('hidden');
+                        }
+                    }
+                }
+            });
+
+            return isValid;
+        }
+
+        function updateUI() {
+            // Ховаємо всі кроки
+            document.querySelectorAll('.quiz-step').forEach(el => el.classList.add('hidden'));
+            // Показуємо поточний
+            document.querySelector(`.quiz-step[data-step="${currentStep}"]`).classList.remove('hidden');
+            document.querySelector(`.quiz-step[data-step="${currentStep}"]`).classList.add('fade-in');
+
+            // Прогрес бар
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('current-step-num').innerText = currentStep;
+
+            // Кнопки
+            document.getElementById('btn-prev').classList.toggle('hidden', currentStep === 1);
+            
+            if (currentStep === totalSteps) {
+                document.getElementById('btn-next').classList.add('hidden');
+                document.getElementById('btn-submit').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-next').classList.remove('hidden');
+                document.getElementById('btn-submit').classList.add('hidden');
+            }
+        }
+
+        function nextStep() {
+            if (validateCurrentStep()) {
+                currentStep++;
+                updateUI();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateUI();
+            }
+        }
+
+        // Парсинг UTM
+        function getUTMs() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                source: params.get('utm_source') || '',
+                medium: params.get('utm_medium') || '',
+                campaign: params.get('utm_campaign') || '',
+                content: params.get('utm_content') || '',
+                term: params.get('utm_term') || ''
+            };
+        }
+
+        // Відправка
+        async function submitForm() {
+            if (!validateCurrentStep()) return;
+
+            const btn = document.getElementById('btn-submit');
+            const loader = document.getElementById('submit-loader');
+            const btnText = document.getElementById('submit-text');
+
+            // Блокуємо кнопку
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            btnText.innerText = 'Відправка...';
+
+            const utms = getUTMs();
+            const payload = {
+                name: document.getElementById('q_name').value.trim(),
+                phone: phoneInputIti.getNumber(), // Формат +380...
+                telegram: document.getElementById('q_tg').value.trim(),
+                instagram: document.getElementById('q_insta').value.trim(),
+                niche: document.getElementById('q_niche').value.trim(),
+                product: document.getElementById('q_product').value.trim(),
+                income_current: document.getElementById('q_income_current').value.trim(),
+                income_max: document.getElementById('q_income_max').value.trim(),
+                problem: document.getElementById('q_problem').value.trim(),
+                invest: document.getElementById('q_invest').value.trim(),
+                goal: document.getElementById('q_goal').value.trim(),
+                utm_source: utms.source,
+                utm_medium: utms.medium,
+                utm_campaign: utms.campaign,
+                utm_content: utms.content,
+                utm_term: utms.term
+            };
+
+            try {
+                // Якщо посилання на Google App Script ще немає, імітуємо затримку
+                if(GOOGLE_APP_URL === 'YOUR_GOOGLE_SCRIPT_URL_HERE') {
+                    console.log("Дані для відправки (скрипт не підключено):", payload);
+                    await new Promise(r => setTimeout(r, 1000));
+                    finishFlow();
+                    return;
+                }
+
+                const response = await fetch(GOOGLE_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Важливо для Google Scripts
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                finishFlow();
+            } catch (error) {
+                console.error('Помилка:', error);
+                alert("Сталася помилка при відправці. Спробуйте ще раз.");
+                btn.disabled = false;
+                loader.classList.add('hidden');
+                btnText.innerText = 'Відправити дані';
+            }
+        }
+
+        function finishFlow() {
+            // Піксель: Лід
+            if(typeof fbq === 'function') fbq('track', 'Lead');
+            
+            document.getElementById('quiz-view').classList.add('hidden');
+            document.getElementById('thankyou-view').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
